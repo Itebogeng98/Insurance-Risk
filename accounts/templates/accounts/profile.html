@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load form_tags %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <span class="eyebrow text-primary">Account</span>
+        <h1 class="h3 mb-0">Profile</h1>
+        <p class="text-muted mb-0">Update your contact details and account identity.</p>
+    </div>
+    <a href="{% url 'accounts:password_change' %}" class="btn btn-outline-primary">
+        <i class="bi bi-key me-1"></i>Change Password
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center profile-summary">
+                <div class="profile-avatar">{{ user.username|first|upper }}</div>
+                <h2 class="h5 mb-1">{{ user.get_full_name|default:user.username }}</h2>
+                <p class="text-muted mb-3">{{ user.email|default:"No email captured" }}</p>
+                <span class="badge bg-{% if user.is_staff %}primary{% else %}secondary{% endif %}">
+                    {% if user.is_staff %}Staff{% else %}User{% endif %}
+                </span>
+                <div class="profile-meta">
+                    <div><span>Username</span><strong>{{ user.username }}</strong></div>
+                    <div><span>Access</span><strong>{% if user.is_staff %}Administrator{% elif user.profile %}{{ user.profile.get_role_display }}{% else %}Underwriter{% endif %}</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white fw-semibold"><i class="bi bi-person-badge me-2"></i>Profile Details</div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <div class="row">
+                        {% for field in form %}
+                            <div class="col-md-6">{% render_field field %}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'accounts:dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check2-circle me-1"></i>Save Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{$APP_DOMAIN} {
+    request_body {
+        max_size 51MB
+    }
+    handle_path /static/* {
+        root * /data/app/static
+        file_server
+    }
+    handle {
+        reverse_proxy web:8000 {
+            header_up X-Forwarded-Proto https
+        }
+    }
+}

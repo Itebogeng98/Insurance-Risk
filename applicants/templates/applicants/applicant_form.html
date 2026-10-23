@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load form_tags %}
+
+{% block title %}New Applicant{% endblock %}
+
+{% block content %}
+<div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <span class="eyebrow text-primary">New profile</span>
+        <h1 class="h3 mb-0">Capture Applicant</h1>
+        <p class="text-muted mb-0">Complete one section at a time to build the applicant risk profile.</p>
+    </div>
+    <div class="wizard-count">
+        Step {{ current_step.number }} of {{ total_steps }}
+    </div>
+</div>
+
+<div class="alert alert-info app-note d-flex align-items-start gap-2 mb-4">
+    <i class="bi bi-info-circle mt-1"></i>
+    <div>
+        <strong>Required fields are marked with an asterisk.</strong>
+        <span class="d-block small">Use accurate applicant information because these values feed the underwriting risk model.</span>
+    </div>
+</div>
+
+<div class="wizard-layout">
+    <aside class="wizard-sidebar" aria-label="Applicant capture progress">
+        {% for step in steps %}
+            {% if step.is_available or step.is_complete %}
+                <a class="wizard-step {% if step.is_active %}active{% elif step.is_complete %}complete{% endif %}" href="{{ step.url }}">
+                    <span class="wizard-step-number">{% if step.is_complete %}<i class="bi bi-check2"></i>{% else %}{{ step.number }}{% endif %}</span>
+                    <span>
+                        <strong>{{ step.short_title }}</strong>
+                        <small>{{ step.description }}</small>
+                    </span>
+                </a>
+            {% else %}
+                <div class="wizard-step locked">
+                    <span class="wizard-step-number">{{ step.number }}</span>
+                    <span>
+                        <strong>{{ step.short_title }}</strong>
+                        <small>{{ step.description }}</small>
+                    </span>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </aside>
+
+    <form method="post" novalidate class="wizard-form">
+        {% csrf_token %}
+        <div class="card form-section">
+            <div class="card-header bg-white">
+                <div>
+                    <span class="section-number">{{ current_step.number|stringformat:"02d" }}</span>
+                    <strong><i class="bi {{ current_step.icon }} me-2"></i>{{ current_step.title }}</strong>
+                </div>
+                <small>{{ current_step.description }}</small>
+            </div>
+            <div class="card-body">
+                {% if current_form.non_field_errors %}
+                    <div class="alert alert-danger">{{ current_form.non_field_errors }}</div>
+                {% endif %}
+                <div class="row">
+                    {% for field in current_form %}
+                        <div class="col-md-6">{% render_field field %}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="sticky-actions d-flex justify-content-between gap-2">
+            <div>
+                {% if previous_step_url %}
+                    <a href="{{ previous_step_url }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back
+                    </a>
+                {% else %}
+                    <a href="{% url 'applicants:list' %}" class="btn btn-outline-secondary">Cancel</a>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary">
+                {% if current_step.number == total_steps %}
+                    <i class="bi bi-check2-circle me-1"></i>
+                {% else %}
+                    <i class="bi bi-arrow-right-circle me-1"></i>
+                {% endif %}
+                {{ next_button_label }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

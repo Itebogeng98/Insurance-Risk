@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}Model Management{% endblock %}
+
+{% block content %}
+<div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <span class="eyebrow text-primary">Administration</span>
+        <h1 class="h3 mb-0">Dataset Upload and Model Versions</h1>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header bg-white fw-semibold"><i class="bi bi-cloud-arrow-up me-2"></i>Upload Training Dataset</div>
+            <div class="card-body">
+                {% if training_enabled %}
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="upload">
+                    <div class="mb-3">
+                        <label class="form-label" for="description">Description</label>
+                        <input class="form-control" id="description" name="description" placeholder="October underwriting training dataset">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="dataset">Applicant or Prudential CSV (maximum 50 MB)</label>
+                        <input class="form-control" id="dataset" name="dataset" type="file" accept=".csv" required>
+                    </div>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-arrow-repeat me-1"></i>Upload and Retrain
+                    </button>
+                    <a class="btn btn-outline-secondary mt-2" href="{% url 'risk_engine:applicant_training_template' %}">
+                        <i class="bi bi-download me-1"></i>Applicant CSV template
+                    </a>
+                </form>
+                {% else %}
+                <p class="text-muted mb-0" role="status">Dataset uploads and training are unavailable on this deployment.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-header bg-white fw-semibold"><i class="bi bi-cpu me-2"></i>Model Versions</div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr><th>Version</th><th>Accuracy</th><th>Macro F1</th><th>p95 ms</th><th>Status</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                    {% for version in model_versions %}
+                        <tr>
+                            <td>{{ version.version_tag }}{% if not version.input_contract_verified %}<br><small class="text-muted">Not approved for production</small>{% endif %}</td>
+                            <td>{{ version.accuracy|default:"-" }}</td>
+                            <td>{{ version.macro_f1|default:"-" }}</td>
+                            <td>{{ version.inference_p95_ms|default:"-" }}</td>
+                            <td>{% if version.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Stored</span>{% endif %}</td>
+                            <td class="text-end">
+                                {% if model_activation_enabled and not version.is_active %}
+                                    <form method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="activate">
+                                        <input type="hidden" name="version_id" value="{{ version.pk }}">
+                                        <button class="btn btn-sm btn-outline-primary" type="submit">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Activate
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state compact">
+                                    <i class="bi bi-cpu"></i>
+                                    <h2>No model versions recorded</h2>
+                                    <p>Upload a dataset or train the model to create the first version.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-white fw-semibold"><i class="bi bi-database me-2"></i>Recent Training Datasets</div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>Description</th><th>Version</th><th>Accuracy</th><th>Macro F1</th><th>Uploaded</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for dataset in datasets %}
+                        <tr>
+                            <td>{{ dataset.description }}<br><small>{{ dataset.get_status_display }}{% if dataset.error_message %}: {{ dataset.error_message }}{% endif %}</small></td>
+                            <td>{{ dataset.model_version|default:"-" }}</td>
+                            <td>{{ dataset.accuracy|default:"-" }}</td>
+                            <td>{{ dataset.macro_f1|default:"-" }}</td>
+                            <td>{{ dataset.uploaded_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-state compact">
+                                    <i class="bi bi-database"></i>
+                                    <h2>No datasets uploaded</h2>
+                                    <p>Training dataset history will appear here.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

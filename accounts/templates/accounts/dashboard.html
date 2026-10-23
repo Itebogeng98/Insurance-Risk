@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <span class="eyebrow text-primary">Workspace</span>
+        <h1 class="h3 mb-0">Dashboard</h1>
+        <p class="text-muted mb-0">Track applicant risk profiles, assessments, and follow-up work.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'applicants:create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus me-1"></i>New Applicant
+        </a>
+        <a href="{% url 'applicants:list' %}" class="btn btn-outline-primary">
+            <i class="bi bi-people me-1"></i>Applicants
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="metric-tile metric-tile-primary">
+            <div class="metric-icon"><i class="bi bi-people"></i></div>
+            <div>
+                <span>Total applicants</span>
+                <strong>{{ total_applicants }}</strong>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="metric-tile">
+            <div class="metric-icon"><i class="bi bi-clipboard2-check"></i></div>
+            <div>
+                <span>Assessed applicants</span>
+                <strong>{{ assessed_applicants }}</strong>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="metric-tile">
+            <div class="metric-icon metric-icon-danger"><i class="bi bi-exclamation-triangle"></i></div>
+            <div>
+                <span>High risk records</span>
+                <strong>{{ high_risk_count }}</strong>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="metric-tile">
+            <div class="metric-icon metric-icon-success"><i class="bi bi-graph-up-arrow"></i></div>
+            <div>
+                <span>Low / Medium</span>
+                <strong>{{ low_risk_count }} / {{ medium_risk_count }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-7">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <strong><i class="bi bi-clock-history me-2"></i>Recent Applicants</strong>
+                <a href="{% url 'applicants:list' %}" class="btn btn-sm btn-outline-primary">View all</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr><th>Name</th><th>National ID</th><th>Risk</th><th>Created</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for applicant in recent_applicants %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ applicant }}</div>
+                                    <div class="text-muted small">{{ applicant.email }}</div>
+                                </td>
+                                <td><span class="text-monospace">{{ applicant.national_id }}</span></td>
+                                <td>
+                                    {% with latest=applicant.risk_assessments.first %}
+                                        {% if latest %}
+                                            <span class="badge bg-{% if latest.risk_category == 'LOW' %}success{% elif latest.risk_category == 'MEDIUM' %}warning text-dark{% else %}danger{% endif %}">
+                                                {{ latest.risk_category }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary-subtle text-secondary-emphasis">Pending</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>{{ applicant.created_at|date:"Y-m-d" }}</td>
+                                <td class="text-end"><a href="{% url 'applicants:detail' applicant.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-short"></i>Open</a></td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state compact">
+                                        <i class="bi bi-person-vcard"></i>
+                                        <h2>No applicants yet</h2>
+                                        <p>Create your first applicant profile.</p>
+                                        <a href="{% url 'applicants:create' %}" class="btn btn-primary btn-sm">New applicant</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-5">
+        <div class="card h-100">
+            <div class="card-header bg-white">
+                <strong><i class="bi bi-bell me-2"></i>Needs Attention</strong>
+            </div>
+            <div class="card-body">
+                {% for applicant in attention_applicants %}
+                    <div class="attention-item">
+                        <div>
+                            <strong>{{ applicant }}</strong>
+                            <div class="text-muted small">{{ applicant.national_id }}</div>
+                        </div>
+                        <a href="{% url 'applicants:detail' applicant.pk %}" class="btn btn-sm btn-outline-primary">Review</a>
+                    </div>
+                {% empty %}
+                    <div class="empty-state compact">
+                        <i class="bi bi-check2-circle"></i>
+                        <h2>No urgent items</h2>
+                        <p>High-risk and unassessed applicants will appear here.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

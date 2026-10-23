@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Underwriting Report - {{ applicant }}</title>
+    <style>
+        body {
+            color: #1f2933;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        h1, h2, h3 {
+            margin: 0;
+        }
+        h1 {
+            color: #0b3d63;
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        h2 {
+            border-bottom: 1px solid #d9e2ec;
+            color: #0b3d63;
+            font-size: 15px;
+            margin: 22px 0 8px;
+            padding-bottom: 4px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #d9e2ec;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f4f6f9;
+            color: #52616b;
+            font-weight: 600;
+            width: 34%;
+        }
+        .muted {
+            color: #6c757d;
+        }
+        .summary {
+            background: #f4f6f9;
+            border: 1px solid #d9e2ec;
+            margin: 18px 0;
+            padding: 12px;
+        }
+        .score {
+            color: #0b3d63;
+            font-size: 22px;
+            font-weight: 700;
+        }
+        ul {
+            margin: 6px 0 0 18px;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Underwriting Report</h1>
+    <div class="muted">{{ applicant }} &middot; {{ applicant.national_id }} &middot; Generated {% now "Y-m-d H:i" %}</div>
+    {% include 'reports/partials/report_body.html' %}
+</body>
+</html>

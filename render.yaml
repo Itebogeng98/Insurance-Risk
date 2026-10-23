@@ -1,0 +1,52 @@
+# Free academic preview only. The free database expires after 30 days.
+services:
+  - type: web
+    name: assure-risk
+    runtime: python
+    plan: free
+    buildCommand: bash deploy/render-build.sh
+    startCommand: bash deploy/render-start.sh
+    healthCheckPath: /healthz/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.5
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.render
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ACADEMIC_DEMO
+        value: "True"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: DB_ENGINE
+        value: postgresql
+      - key: DB_HOST
+        fromDatabase:
+          name: assure-risk-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: assure-risk-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: assure-risk-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: assure-risk-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: assure-risk-db
+          property: password
+
+databases:
+  - name: assure-risk-db
+    plan: free
+    databaseName: assure_risk
+    user: assure_risk

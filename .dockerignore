@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+venv
+.venv
+__pycache__
+*.pyc
+*.sqlite3
+media
+staticfiles
+risk_engine/ml_models
+etl/raw_data
+.agents
+.codex
+.claude

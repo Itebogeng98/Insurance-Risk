@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ applicant }}{% endblock %}
+
+{% block content %}
+<div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{% url 'applicants:list' %}">Applicants</a></li>
+                <li class="breadcrumb-item active">{{ applicant }}</li>
+            </ol>
+        </nav>
+        <span class="eyebrow text-primary">Applicant profile</span>
+        <h1 class="h3 mb-0">{{ applicant }}</h1>
+        <p class="text-muted mb-0">
+            {{ applicant.national_id }} &middot; {{ applicant.get_gender_display }} &middot; DOB {{ applicant.date_of_birth }}
+        </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'reports:underwriting' applicant.pk %}" class="btn btn-outline-primary">
+            <i class="bi bi-file-text me-1"></i>Report
+        </a>
+        <a href="{% url 'reports:underwriting_pdf' applicant.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card profile-card h-100">
+            <div class="card-body">
+                <div class="section-title">
+                    <i class="bi bi-person-lines-fill"></i>
+                    <h2>Contact and Identity</h2>
+                </div>
+                <div class="info-grid">
+                    <div><span>Email</span><strong>{{ applicant.email }}</strong></div>
+                    <div><span>Phone</span><strong>{{ applicant.phone_number }}</strong></div>
+                    <div><span>Captured by</span><strong>{{ applicant.created_by }}</strong></div>
+                    <div><span>Created</span><strong>{{ applicant.created_at|date:"Y-m-d" }}</strong></div>
+                    <div class="info-grid-wide"><span>Address</span><strong>{{ applicant.address }}</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card risk-summary-card h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                {% with latest=applicant.risk_assessments.first %}
+                    {% if latest %}
+                        <div class="display-6 fw-bold text-{% if latest.risk_category == 'LOW' %}success{% elif latest.risk_category == 'MEDIUM' %}warning{% else %}danger{% endif %}">
+                            {{ latest.risk_score }}
+                        </div>
+                        <span class="badge risk-badge bg-{% if latest.risk_category == 'LOW' %}success{% elif latest.risk_category == 'MEDIUM' %}warning text-dark{% else %}danger{% endif %} mb-2">
+                            {{ latest.risk_category }} RISK
+                        </span>
+                        <p class="text-muted small mb-1">Confidence {{ latest.confidence|floatformat:3 }}</p>
+                        {% if latest.needs_manual_review %}
+                            <span class="badge bg-danger-subtle text-danger-emphasis mb-2">Manual review required</span>
+                        {% endif %}
+                        <p class="text-muted small mb-3">Assessed {{ latest.assessed_at|date:"Y-m-d H:i" }}</p>
+                    {% else %}
+                        <p class="text-muted mb-3">Not assessed yet</p>
+                    {% endif %}
+                {% endwith %}
+                {% if can_assess_applicants %}
+                    <form method="post" action="{% url 'risk_engine:assess' applicant.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-arrow-repeat me-1"></i>Run Risk Assessment
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% with latest=applicant.risk_assessments.first %}
+{% if latest %}
+<div class="card mb-4">
+    <div class="card-header bg-white fw-semibold"><i class="bi bi-diagram-3 me-2"></i>Rule-Based Indicators</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Rank</th><th>Factor</th><th>Contribution</th></tr></thead>
+            <tbody>
+            {% for factor in latest.feature_contributions.all %}
+                <tr><td>{{ factor.rank }}</td><td>{{ factor.label }}</td><td>{{ factor.contribution }}</td></tr>
+            {% empty %}
+                <tr><td colspan="3" class="text-muted">No factor explanation stored for this assessment.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endwith %}
+
+<div class="card mb-4">
+    <div class="card-header bg-white fw-semibold"><i class="bi bi-lightbulb me-2"></i>Lifestyle Improvement Recommendations</div>
+    <div class="card-body">
+        <ul class="recommendation-list mb-0">
+            {% for recommendation in recommendations %}
+                <li>{{ recommendation }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+{% if applicant.risk_assessments.all|length > 1 %}
+<div class="card mb-4">
+    <div class="card-header bg-white fw-semibold">Assessment History</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Score</th><th>Category</th><th>Confidence</th><th>Manual review</th><th>Assessed</th></tr></thead>
+            <tbody>
+            {% for assessment in applicant.risk_assessments.all %}
+                <tr><td>{{ assessment.risk_score }}</td><td>{{ assessment.risk_category }}</td><td>{{ assessment.confidence|floatformat:3 }}</td><td>{{ assessment.needs_manual_review|yesno:"Yes,No" }}</td><td>{{ assessment.assessed_at|date:"Y-m-d H:i" }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header bg-white fw-semibold"><i class="bi bi-heart-pulse me-2"></i>Medical History</div>
+            <div class="card-body">
+                {% if applicant.medical_history %}
+                <dl class="data-list mb-0">
+                    <dt class="col-6">Height</dt><dd class="col-6">{{ applicant.medical_history.height_cm }} cm</dd>
+                    <dt class="col-6">Weight</dt><dd class="col-6">{{ applicant.medical_history.weight_kg }} kg</dd>
+                    <dt class="col-6">BMI</dt><dd class="col-6">{{ applicant.medical_history.bmi }}</dd>
+                    <dt class="col-6">Chronic illness</dt><dd class="col-6">{{ applicant.medical_history.has_chronic_illness|yesno }}</dd>
+                    <dt class="col-6">Family history</dt><dd class="col-6">{{ applicant.medical_history.has_family_history_of_illness|yesno }}</dd>
+                    <dt class="col-6">Blood pressure</dt><dd class="col-6">{{ applicant.medical_history.blood_pressure|default:"-" }}</dd>
+                </dl>
+                {% else %}<p class="text-muted mb-0">Not captured.</p>{% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-white fw-semibold"><i class="bi bi-activity me-2"></i>Lifestyle Habits</div>
+            <div class="card-body">
+                {% if applicant.lifestyle_habits %}
+                <dl class="data-list mb-0">
+                    <dt class="col-6">Smoker</dt><dd class="col-6">{{ applicant.lifestyle_habits.smoker|yesno }}</dd>
+                    <dt class="col-6">Alcohol</dt><dd class="col-6">{{ applicant.lifestyle_habits.get_alcohol_consumption_display }}</dd>
+                    <dt class="col-6">Exercise</dt><dd class="col-6">{{ applicant.lifestyle_habits.exercise_days_per_week }} days/week</dd>
+                    <dt class="col-6">Occupation</dt><dd class="col-6">{{ applicant.lifestyle_habits.occupation }}</dd>
+                    <dt class="col-6">Occupation risk</dt><dd class="col-6">{{ applicant.lifestyle_habits.get_occupation_risk_level_display }}</dd>
+                </dl>
+                {% else %}<p class="text-muted mb-0">Not captured.</p>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header bg-white fw-semibold"><i class="bi bi-cash-coin me-2"></i>Salary</div>
+            <div class="card-body">
+                {% if applicant.salary %}
+                <dl class="data-list mb-0">
+                    <dt class="col-6">Status</dt><dd class="col-6">{{ applicant.salary.get_employment_status_display }}</dd>
+                    <dt class="col-6">Employer</dt><dd class="col-6">{{ applicant.salary.employer_name|default:"-" }}</dd>
+                    <dt class="col-6">Monthly income</dt><dd class="col-6">{{ applicant.salary.monthly_income }}</dd>
+                    <dt class="col-6">Years employed</dt><dd class="col-6">{{ applicant.salary.years_employed }}</dd>
+                </dl>
+                {% else %}<p class="text-muted mb-0">Not captured.</p>{% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-white fw-semibold"><i class="bi bi-car-front me-2"></i>Vehicle Insurance History</div>
+            <div class="card-body">
+                {% if applicant.vehicle_insurance_history %}
+                <dl class="data-list mb-0">
+                    <dt class="col-6">Insured</dt><dd class="col-6">{{ applicant.vehicle_insurance_history.has_vehicle_insurance|yesno }}</dd>
+                    <dt class="col-6">Years licensed</dt><dd class="col-6">{{ applicant.vehicle_insurance_history.years_licensed }}</dd>
+                    <dt class="col-6">Accidents</dt><dd class="col-6">{{ applicant.vehicle_insurance_history.number_of_accidents }}</dd>
+                    <dt class="col-6">Claims</dt><dd class="col-6">{{ applicant.vehicle_insurance_history.number_of_claims }}</dd>
+                    <dt class="col-6">Violations</dt><dd class="col-6">{{ applicant.vehicle_insurance_history.traffic_violations }}</dd>
+                </dl>
+                {% else %}<p class="text-muted mb-0">Not captured.</p>{% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-white fw-semibold"><i class="bi bi-wallet2 me-2"></i>Spending Behaviour</div>
+            <div class="card-body">
+                {% if applicant.spending_behaviour %}
+                <dl class="data-list mb-0">
+                    <dt class="col-6">Monthly expenses</dt><dd class="col-6">{{ applicant.spending_behaviour.monthly_expenses }}</dd>
+                    <dt class="col-6">Monthly savings</dt><dd class="col-6">{{ applicant.spending_behaviour.monthly_savings }}</dd>
+                    <dt class="col-6">Total debt</dt><dd class="col-6">{{ applicant.spending_behaviour.total_debt }}</dd>
+                    <dt class="col-6">Credit score</dt><dd class="col-6">{{ applicant.spending_behaviour.credit_score|default:"-" }}</dd>
+                </dl>
+                {% else %}<p class="text-muted mb-0">Not captured.</p>{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
