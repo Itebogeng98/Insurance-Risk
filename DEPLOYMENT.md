@@ -11,8 +11,21 @@ Use a Linux Docker host with a domain pointing to it. Production uses PostgreSQL
 Gunicorn behind Caddy HTTPS, and a separate database-backed training worker.
 The Python image matches the local 3.14 runtime; pinned NumPy/SciPy require 3.12+.
 
-Configure `.env.production` using `.env.production.example`, with real domain and
-random secrets. Never commit credentials. Run these commands from the project:
+Configure a local `.env.production` with the following variables. Environment files,
+including examples, are intentionally not versioned. Never commit credentials.
+
+| Variable | Required value |
+| --- | --- |
+| `APP_DOMAIN` | Your public hostname |
+| `ALLOWED_HOSTS` | Your public hostname (comma-separated for multiple hosts) |
+| `CSRF_TRUSTED_ORIGINS` | Your full HTTPS origin |
+| `SECRET_KEY` | A long, securely generated random secret |
+| `DB_NAME` | PostgreSQL database name |
+| `DB_USER` | PostgreSQL database user |
+| `DB_PASSWORD` | A strong, unique database password |
+| `DEBUG` | `False` |
+
+Run these commands from the project:
 
 ```sh
 docker compose --env-file .env.production build

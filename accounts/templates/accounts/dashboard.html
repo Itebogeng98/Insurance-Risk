@@ -10,9 +10,11 @@
         <p class="text-muted mb-0">Track applicant risk profiles, assessments, and follow-up work.</p>
     </div>
     <div class="d-flex gap-2">
+        {% if user.profile.role != 'CUSTOMER' %}
         <a href="{% url 'applicants:create' %}" class="btn btn-primary">
             <i class="bi bi-person-plus me-1"></i>New Applicant
         </a>
+        {% endif %}
         <a href="{% url 'applicants:list' %}" class="btn btn-outline-primary">
             <i class="bi bi-people me-1"></i>Applicants
         </a>
@@ -98,8 +100,12 @@
                                     <div class="empty-state compact">
                                         <i class="bi bi-person-vcard"></i>
                                         <h2>No applicants yet</h2>
+                                        {% if user.profile.role != 'CUSTOMER' %}
                                         <p>Create your first applicant profile.</p>
                                         <a href="{% url 'applicants:create' %}" class="btn btn-primary btn-sm">New applicant</a>
+                                        {% else %}
+                                        <p>No applicant record is linked to your account yet.</p>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>

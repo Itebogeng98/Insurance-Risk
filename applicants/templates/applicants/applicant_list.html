@@ -113,7 +113,7 @@
                                 <a href="{% url 'applicants:list' %}" class="btn btn-outline-primary btn-sm">Clear search</a>
                             {% else %}
                                 <h2>No applicants yet</h2>
-                                <p>{% if can_create_applicants %}Create the first applicant profile to start risk assessment.{% else %}No applicant record is linked to your account email yet.{% endif %}</p>
+                                <p>{% if can_create_applicants %}Create the first applicant profile to start risk assessment.{% else %}No applicant record is linked to your account yet.{% endif %}</p>
                                 {% if can_create_applicants %}
                                     <a href="{% url 'applicants:create' %}" class="btn btn-primary btn-sm">New applicant</a>
                                 {% endif %}

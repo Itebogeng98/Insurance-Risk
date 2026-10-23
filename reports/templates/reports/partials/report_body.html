@@ -40,6 +40,7 @@
             <i class="bi bi-diagram-3"></i>
             <h2>Rule-Based Indicators</h2>
         </div>
+        <div class="table-responsive" tabindex="0" role="region" aria-label="Rule-based indicators">
         <table class="table table-sm">
             <thead>
                 <tr><th>Rank</th><th>Factor</th><th>Contribution</th></tr>
@@ -56,6 +57,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
 </section>
 {% endif %}
@@ -66,7 +68,7 @@
             <i class="bi bi-person-lines-fill"></i>
             <h2>Personal and Contact Details</h2>
         </div>
-        <table class="table table-sm">
+        <table class="table table-sm report-details">
             <tbody>
                 <tr><th>Email</th><td>{{ applicant.email }}</td></tr>
                 <tr><th>Phone</th><td>{{ applicant.phone_number }}</td></tr>
@@ -83,7 +85,7 @@
             <i class="bi bi-heart-pulse"></i>
             <h2>Risk Factors</h2>
         </div>
-        <table class="table table-sm">
+        <table class="table table-sm report-details">
             <tbody>
                 <tr><th>Height</th><td>{{ applicant.medical_history.height_cm }} cm</td></tr>
                 <tr><th>Weight</th><td>{{ applicant.medical_history.weight_kg }} kg</td></tr>
@@ -108,7 +110,7 @@
             <i class="bi bi-cash-coin"></i>
             <h2>Financial Profile</h2>
         </div>
-        <table class="table table-sm">
+        <table class="table table-sm report-details">
             <tbody>
                 <tr><th>Employment status</th><td>{{ applicant.salary.get_employment_status_display }}</td></tr>
                 <tr><th>Monthly income</th><td>{{ applicant.salary.monthly_income }}</td></tr>
@@ -142,6 +144,7 @@
             <h2>Assessment History</h2>
         </div>
         {% if applicant.risk_assessments.all %}
+            <div class="table-responsive" tabindex="0" role="region" aria-label="Assessment history">
             <table class="table table-sm">
                 <thead>
                     <tr><th>Score</th><th>Category</th><th>Confidence</th><th>Manual review</th><th>Assessed</th><th>Model Version</th></tr>
@@ -159,6 +162,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         {% else %}
             <p class="text-muted mb-0">No assessment history available.</p>
         {% endif %}

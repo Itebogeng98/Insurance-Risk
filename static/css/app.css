@@ -25,7 +25,7 @@ body {
   background: var(--color-background);
   color: var(--color-text);
   font-family: "Inter", Arial, sans-serif;
-  overflow-x: hidden;
+  overflow-wrap: anywhere;
 }
 
 h1,
@@ -69,15 +69,17 @@ button:focus-visible,
 .btn {
   border-radius: 0.4rem;
   font-weight: 700;
+  white-space: normal;
 }
 
 .icon-btn {
   align-items: center;
   display: inline-flex;
-  height: 2.55rem;
+  height: 2.75rem;
+  flex-shrink: 0;
   justify-content: center;
   padding: 0;
-  width: 2.55rem;
+  width: 2.75rem;
 }
 
 .btn-primary {
@@ -182,7 +184,7 @@ button:focus-visible,
   display: inline-block;
   font-size: 0.76rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -195,11 +197,7 @@ button:focus-visible,
   background: var(--color-primary);
   color: rgba(255, 255, 255, 0.86);
   font-size: 0.84rem;
-  left: 0;
-  position: fixed;
-  right: 0;
-  top: 0;
-  z-index: 1001;
+  padding: 0.5rem 0;
 }
 
 .site-info-bar .container {
@@ -208,6 +206,7 @@ button:focus-visible,
   gap: 1rem;
   justify-content: space-between;
   min-height: 2.45rem;
+  flex-wrap: wrap;
 }
 
 .site-info-bar p {
@@ -236,9 +235,9 @@ button:focus-visible,
   background: var(--color-white);
   border-bottom: 1px solid var(--color-line);
   left: 0;
-  position: fixed;
+  position: sticky;
   right: 0;
-  top: 2.45rem;
+  top: 0;
   z-index: 1000;
 }
 
@@ -247,11 +246,11 @@ button:focus-visible,
 }
 
 .landing-page {
-  padding-top: 7.45rem;
+  padding-top: 0;
 }
 
 .legal-public-page {
-  padding-top: 5rem;
+  padding-top: 0;
 }
 
 .legal-public-page .site-header {
@@ -286,7 +285,7 @@ button:focus-visible,
 
 .hero-copy-block h1 {
   color: var(--color-primary);
-  font-size: clamp(2.7rem, 5.2vw, 5rem);
+  font-size: 3.5rem;
   font-weight: 800;
   line-height: 1.02;
   margin: 0.8rem 0 1.2rem;
@@ -314,6 +313,8 @@ button:focus-visible,
 .assurance-visual {
   align-items: center;
   aspect-ratio: 4 / 3;
+  width: 100%;
+  min-width: 0;
   background:
     linear-gradient(135deg, rgba(11, 31, 58, 0.9), rgba(17, 166, 160, 0.72)),
     repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 14px);
@@ -533,7 +534,7 @@ button:focus-visible,
 .consultation-cta h2,
 .insights-strip h2 {
   color: var(--color-primary);
-  font-size: clamp(2rem, 3.5vw, 3.3rem);
+  font-size: 2.5rem;
   font-weight: 800;
   line-height: 1.08;
   margin: 0.55rem 0 0.8rem;
@@ -750,7 +751,7 @@ button:focus-visible,
 
 .legal-card h1 {
   color: var(--color-primary);
-  font-size: clamp(2rem, 4vw, 3.4rem);
+  font-size: 2.5rem;
   font-weight: 800;
   margin: 0.5rem 0 1rem;
 }
@@ -819,10 +820,8 @@ button:focus-visible,
 .topbar {
   background: rgba(255, 255, 255, 0.96);
   border-bottom: 1px solid var(--color-line);
-  left: var(--sidebar-width);
   min-height: 58px;
-  position: fixed;
-  right: 0;
+  position: sticky;
   top: 0;
   z-index: 1010;
 }
@@ -854,11 +853,12 @@ button:focus-visible,
   height: 1.8rem;
   justify-content: center;
   width: 1.8rem;
+  flex-shrink: 0;
 }
 
-body > .d-flex > .flex-grow-1 {
+.app-workspace {
+  min-width: 0;
   margin-left: var(--sidebar-width);
-  padding-top: 58px;
 }
 
 .app-main {
@@ -870,7 +870,7 @@ body > .d-flex > .flex-grow-1 {
 .feature-tile {
   background: var(--color-white);
   border: 1px solid var(--color-line);
-  border-radius: 0.7rem;
+  border-radius: 0.5rem;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
   overflow: hidden;
 }
@@ -925,7 +925,7 @@ body > .d-flex > .flex-grow-1 {
 .metric-tile strong {
   color: var(--color-text);
   display: block;
-  font-size: clamp(1.1rem, 1.5vw, 1.45rem);
+  font-size: 1.25rem;
   line-height: 1.18;
   margin-top: 0.28rem;
 }
@@ -938,7 +938,7 @@ body > .d-flex > .flex-grow-1 {
   color: #475467;
   font-size: 0.78rem;
   font-weight: 850;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -1175,6 +1175,8 @@ dl.row dt {
   padding: 0.65rem;
   position: sticky;
   top: 78px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .wizard-step {
@@ -1267,6 +1269,7 @@ dl.row dt {
 .profile-meta {
   border-top: 1px solid var(--color-line);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
   margin-top: 1.25rem;
   padding-top: 1.25rem;
@@ -1285,6 +1288,8 @@ dl.row dt {
   color: var(--color-text);
   display: block;
   font-weight: 800;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .auth-shell {
@@ -1322,7 +1327,7 @@ dl.row dt {
 }
 
 .auth-panel h1 {
-  font-size: clamp(2rem, 4vw, 3.6rem);
+  font-size: 2.75rem;
   font-weight: 850;
   line-height: 1.03;
   margin: 0.75rem 0 1rem;
@@ -1353,6 +1358,7 @@ dl.row dt {
   align-self: center;
   max-width: 440px;
   width: 100%;
+  min-width: 0;
 }
 
 .risk-meter {
@@ -1427,6 +1433,19 @@ dl.row dt {
 }
 
 @media (max-width: 1199.98px) {
+  .app-workspace {
+    margin-left: 0;
+  }
+
+  .wizard-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wizard-sidebar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    position: static;
+  }
+
   .service-grid,
   .industry-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1474,13 +1493,11 @@ dl.row dt {
   }
 
   .wizard-sidebar {
-    display: flex;
-    overflow-x: auto;
     position: static;
   }
 
   .wizard-step {
-    min-width: 12rem;
+    min-width: 0;
   }
 }
 
@@ -1494,7 +1511,7 @@ dl.row dt {
   }
 
   .landing-page {
-    padding-top: 4.3rem;
+    padding-top: 0;
   }
 
   .iar-hero,
@@ -1504,7 +1521,7 @@ dl.row dt {
   }
 
   .hero-copy-block h1 {
-    font-size: clamp(2.35rem, 13vw, 3.6rem);
+    font-size: 2.25rem;
   }
 
   .service-grid,
@@ -1525,7 +1542,7 @@ dl.row dt {
     left: 0;
   }
 
-  body > .d-flex > .flex-grow-1 {
+  .app-workspace {
     margin-left: 0;
   }
 
@@ -1561,5 +1578,305 @@ dl.row dt {
 
   .footer-bottom {
     flex-direction: column;
+  }
+}
+
+/* Keep shrinking content inside its layout track, not outside the viewport. */
+.app-shell,
+.app-workspace,
+.card,
+.card-body,
+.row > *,
+.page-heading > *,
+.metric-tile > div,
+.attention-item > div,
+.hero-layout > *,
+.footer-grid > * {
+  min-width: 0;
+}
+
+.profile-meta > * {
+  min-width: 0;
+}
+
+.table .btn {
+  white-space: nowrap;
+}
+
+.page-heading > .d-flex,
+.card-header.d-flex,
+.sticky-actions,
+.auth-preview-meta {
+  flex-wrap: wrap;
+}
+
+.card-header.d-flex {
+  gap: 0.75rem;
+}
+
+.user-name {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu,
+.dropdown-menu {
+  max-width: calc(100vw - 2rem);
+}
+
+.dropdown-item {
+  white-space: normal;
+}
+
+#mobileSidebar {
+  --bs-offcanvas-width: min(320px, 90vw);
+}
+
+#mobileSidebar .nav-link {
+  min-height: 44px;
+}
+
+.table-responsive {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+}
+
+.table-responsive:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: -2px;
+}
+
+.table-responsive .table {
+  min-width: 36rem;
+}
+
+.table-responsive .table:has(.empty-state) {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.table-responsive .table:has(.empty-state) thead {
+  display: none;
+}
+
+.table td,
+.table th {
+  overflow-wrap: anywhere;
+}
+
+.table td {
+  max-width: 22rem;
+}
+
+.report-details {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.report-details th {
+  width: 42%;
+}
+
+.section-title i {
+  flex-shrink: 0;
+}
+
+.form-control,
+.form-select {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.form-control[type="file"] {
+  overflow: hidden;
+}
+
+.pagination {
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
+}
+
+.footer-bottom > span:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.site-header .navbar > .container {
+  gap: 0.75rem;
+}
+
+.site-header .navbar-brand {
+  margin-right: 0;
+}
+
+.landing-page section[id] {
+  scroll-margin-top: 6rem;
+}
+
+@media (min-width: 1200px) and (max-width: 1399.98px) {
+  .wizard-layout {
+    grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  }
+
+  .wizard-form .col-md-6 {
+    width: 100%;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  .wizard-step small {
+    display: none;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  .site-header .navbar-collapse {
+    max-height: 70dvh;
+    overflow-y: auto;
+    padding-bottom: 0.75rem;
+  }
+
+  .site-header .nav-item {
+    margin-top: 0.25rem;
+  }
+
+  .site-header .nav-item .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .app-main {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .page-heading > .d-flex {
+    width: 100%;
+  }
+
+  .page-heading > .d-flex > .btn {
+    flex: 1 1 auto;
+  }
+
+  .btn,
+  .page-link {
+    min-height: 44px;
+    align-content: center;
+  }
+
+  .form-control,
+  .form-select {
+    font-size: 1rem;
+  }
+
+  .sticky-actions {
+    position: static;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .sticky-actions > button {
+    flex: 1 1 10rem;
+  }
+
+  .data-list {
+    gap: 0.25rem;
+  }
+
+  .data-list dt {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .data-list dd {
+    margin-bottom: 0.5rem;
+  }
+
+  .auth-shell {
+    min-height: 100dvh;
+    padding: 1rem;
+  }
+
+  .auth-card > .card-body,
+  .legal-card {
+    padding: 1.25rem !important;
+  }
+
+  .legal-page {
+    padding: 2rem 0;
+  }
+
+  .section-heading h2,
+  .value-heading h2,
+  .consultation-cta h2,
+  .insights-strip h2,
+  .legal-card h1 {
+    font-size: 1.75rem;
+  }
+
+  .consultation-cta .container {
+    width: calc(100% - 1.5rem);
+    padding: 1.5rem;
+  }
+
+  .assurance-visual {
+    aspect-ratio: auto;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 5rem 1rem 4rem;
+  }
+
+  .visual-panel-main,
+  .visual-panel-side {
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .visual-seal {
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.5rem;
+    top: 1rem;
+    left: 1rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .wizard-sidebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0.4rem;
+    gap: 0.2rem;
+  }
+
+  .wizard-step {
+    align-items: center;
+    padding: 0.5rem;
+    gap: 0.4rem;
+  }
+
+  .wizard-step strong {
+    font-size: 0.82rem;
+  }
+
+  .topbar .navbar-brand {
+    font-size: 1rem;
+    margin-right: 0.5rem;
+  }
+
+  .attention-item {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .service-card {
+    transition: none;
   }
 }

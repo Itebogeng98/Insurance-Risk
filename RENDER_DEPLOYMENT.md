@@ -39,9 +39,10 @@ Use demonstration records only, not real identity, health or financial informati
 5. Open the generated `https://<service>.onrender.com` address. `/healthz/` returns
    HTTP 200 only when the database query succeeds; it does not certify model readiness.
 
-The existing root `requirements.txt` currently contains unrelated non-package text.
-It was deliberately preserved. Render uses `requirements-render.txt`, not that file;
-the existing Dockerfile still needs its dependency input corrected before another Docker build.
+Render uses `requirements-render.txt`. The root `requirements.txt` references the
+same pinned packages for local and Docker installs. Environment files (including
+examples), local databases, generated assets and local tool settings are excluded
+from Git. Configure deployment values in Render's Environment page.
 
 ## Create the first administrator
 
