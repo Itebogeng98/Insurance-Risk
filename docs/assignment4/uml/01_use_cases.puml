@@ -1,0 +1,44 @@
+@startuml
+!pragma layout smetana
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 16
+skinparam shadowing false
+left to right direction
+actor Applicant as A
+actor Underwriter as U
+actor Administrator as D
+rectangle "Assure Risk prototype" {
+  usecase "Register Applicant account" as Register
+  usecase "Sign in / manage own account" as Login
+  usecase "View authorised record\nand export report" as Read
+  usecase "Capture six-section\napplicant record" as Capture
+  usecase "Validate input" as Validate
+  usecase "Request risk assessment\n[model availability gate]" as Score
+  usecase "Manage roles and\nlink verified account" as Access
+  usecase "Review model versions\nand audit entries" as Review
+}
+A --> Register
+A --> Login
+A --> Read
+U --> Login
+U --> Read
+U --> Capture
+U --> Score
+D --> Login
+D --> Read
+D --> Capture
+D --> Score
+D --> Access
+D --> Review
+Capture ..> Validate : <<include>>
+note bottom of Read
+Applicant: account-linked record only.
+Underwriter: own created records.
+Administrator: all records.
+end note
+note bottom of Access
+Admin-site operations require staff status
+and suitable permissions.
+end note
+@enduml

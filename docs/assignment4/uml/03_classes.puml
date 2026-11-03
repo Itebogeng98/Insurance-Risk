@@ -1,0 +1,85 @@
+@startuml
+!pragma layout smetana
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 15
+skinparam shadowing false
+hide empty members
+class User {
+  username : str
+  is_staff : bool
+  is_active : bool
+  +check_password()
+}
+class UserProfile {
+  role : enum
+}
+class Applicant {
+  national_id : str {unique}
+  date_of_birth : date
+  consent_given : bool
+  +clean()
+}
+class MedicalHistory {
+  height_cm : decimal
+  weight_kg : decimal
+  +bmi : decimal {derived}
+  +clean()
+}
+class LifestyleHabits {
+  smoker : bool
+  occupation_risk_level : enum
+  +clean()
+}
+class Salary {
+  monthly_income : decimal
+  employment_status : enum
+  +clean()
+}
+class VehicleInsuranceHistory {
+  number_of_accidents : int
+  number_of_claims : int
+  +clean()
+}
+class SpendingBehaviour {
+  credit_score : int {optional}
+  total_debt : decimal
+  +clean()
+}
+class RiskAssessment {
+  risk_score : decimal
+  risk_category : enum
+  confidence : decimal
+  model_version : str
+}
+class FeatureContribution {
+  label : str
+  contribution : decimal
+  rank : int
+}
+class Recommendation {
+  category : str
+  message : str
+}
+class ModelVersion {
+  version_tag : str
+  artifact_path : str
+  input_contract_verified : bool
+}
+User "1" -- "0..1" UserProfile
+User "1" -- "0..*" Applicant : created_by
+User "0..1" -- "0..1" Applicant : account
+Applicant "1" -- "0..1" MedicalHistory
+Applicant "1" -- "0..1" LifestyleHabits
+Applicant "1" -- "0..1" Salary
+Applicant "1" -- "0..1" VehicleInsuranceHistory
+Applicant "1" -- "0..1" SpendingBehaviour
+Applicant "1" -- "0..*" RiskAssessment
+RiskAssessment "1" -- "0..*" FeatureContribution
+RiskAssessment "1" -- "0..*" Recommendation
+RiskAssessment ..> ModelVersion : tag reference\n(not FK)
+MedicalHistory -[hidden]down-> LifestyleHabits
+LifestyleHabits -[hidden]down-> Salary
+VehicleInsuranceHistory -[hidden]down-> SpendingBehaviour
+SpendingBehaviour -[hidden]down-> RiskAssessment
+@enduml

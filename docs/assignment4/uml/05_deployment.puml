@@ -1,0 +1,40 @@
+@startuml
+!pragma layout smetana
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 16
+skinparam shadowing false
+top to bottom direction
+node "User device" {
+  component "Browser\nApplicant / Underwriter / Administrator" as Browser
+}
+node "Render web service\nconfig.render" {
+  component "Gunicorn + Django" as Django
+  component "accounts + applicants" as Intake
+  component "risk_engine\nmodel gate / scoring functions" as Risk
+  component "reports\nReportLab PDF" as Reports
+  component "WhiteNoise\ncollected static assets" as Static
+  Django --> Intake
+  Django --> Risk
+  Django --> Reports
+  Django --> Static
+  Intake -[hidden]down-> Reports
+  Risk -[hidden]down-> Static
+}
+database "PostgreSQL\nusers / applicants / assessments / logs" as DB
+Browser --> Django : HTTPS
+Intake --> DB : ORM
+Risk --> DB : ORM
+Reports --> DB : authorised reads
+node "Local development / evaluation\nseparate from hosted runtime" {
+  artifact "Kaggle Prudential CSV" as CSV
+  component "Native evaluation command" as Eval
+  artifact "kaggle_native.json" as Results
+  component "Applicant-schema training\n+ database-backed worker" as Worker
+  artifact "Candidate joblib model" as Candidate
+  CSV --> Eval
+  Eval --> Results
+  Worker --> Candidate
+}
+DB -[hidden]down-> Eval
+@enduml

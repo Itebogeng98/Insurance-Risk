@@ -1,0 +1,31 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 17
+skinparam shadowing false
+start
+:Underwriter signs in;
+if (Authorised to create?) then (yes)
+  repeat
+    :Enter or correct current section;
+    :Validate required fields\nand relationships;
+  repeat while (Invalid input?) is (yes) not (no)
+  :Continue until all six\nsections are valid;
+  :Save Applicant and five sections\nin database transaction;
+  :Open saved profile;
+  if (Request assessment?) then (yes)
+    :Check record visibility\nand model gate;
+    if (Approved compatible\nmodel available?) then (yes)
+      :Load model and build\nvalidated feature row;
+      :ML predict_proba produces category,\nscore and confidence;
+      :Store assessment, rule-based indicators\nand recommendations;
+    else (no)
+      :Show model unavailable / not approved;\ndo not invent or save a result;
+    endif
+  endif
+  :View report and export PDF;\nshow no-assessment state if needed;
+else (no)
+  :Deny capture and return to permitted records;
+endif
+stop
+@enduml

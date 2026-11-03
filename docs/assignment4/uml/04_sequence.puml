@@ -1,0 +1,33 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 18
+skinparam maxMessageSize 220
+skinparam shadowing false
+actor Underwriter as U
+boundary "Browser" as UI
+control "Views + scoring" as App
+database "PostgreSQL" as DB
+participant "Joblib / ML pipeline" as ML
+U -> UI : Run Risk Assessment
+UI -> App : POST with session and CSRF
+App -> DB : Authorised record + active model metadata
+DB --> App : Applicant / ModelVersion
+App -> App : Check role, sections and model gate
+alt invalid access, input or model
+  App --> UI : Denial or meaningful error; no invented score
+else authorised and approved model available
+  App -> ML : Load approved artifact
+  App -> ML : predict_proba(feature row)
+  ML --> App : Class probabilities
+  App -> App : Score, confidence, rules, recommendations
+  App -> DB : Save assessment + related outputs + audit
+  DB --> App : Stored records
+  App --> UI : Redirect to updated profile
+end
+note over App, ML
+In-process inference; not an external Kaggle API.
+Persistence messages grouped for readability,
+not a claim of a single database transaction.
+end note
+@enduml
