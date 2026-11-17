@@ -10,8 +10,16 @@ from .models import ModelVersion, TrainingDataset
 def validate_production_model(version):
     if not getattr(settings, 'REQUIRE_VALIDATED_MODEL', False):
         return
-    if version is None or version.training_schema < 2:
-        raise ValueError('Retrain this legacy model before production activation.')
+    if version is None:
+        raise ValueError(
+            'No applicant-scoring model is active. A trained, input-verified applicant model '
+            'must be activated before assessments can run. Native Kaggle analysis is separate.'
+        )
+    if version.training_schema < 2:
+        raise ValueError(
+            'This model record uses a legacy training schema. Train and register a compatible '
+            'applicant model; changing the schema number manually does not convert its inputs.'
+        )
     if not version.input_contract_verified:
         raise ValueError('The training inputs have not been verified against live applicant inputs.')
     if (version.accuracy is None or float(version.accuracy) < settings.MODEL_MIN_ACCURACY
