@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Kaggle Analysis{% endblock %}
+{% block content %}
+<div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <h1 class="h3 mb-0">Kaggle Analysis</h1>
+    <a class="btn btn-outline-secondary" href="{% url 'risk_engine:model_management' %}"><i class="bi bi-arrow-left me-1"></i>Model Management</a>
+</div>
+<p class="text-muted">Prudential dataset research. Categories group dataset outcomes; they are not clinical risk estimates or applicant insurance decisions.</p>
+{% if evidence %}
+<dl class="row border-top border-bottom py-3">
+    <dt class="col-sm-4">Model</dt><dd class="col-sm-8 text-break">{{ evidence.selected_model }}</dd>
+    <dt class="col-sm-4">Built</dt><dd class="col-sm-8 text-break">{{ evidence.built_at }}</dd>
+    <dt class="col-sm-4">Held-out accuracy</dt><dd class="col-sm-8">{{ evidence.test_metrics.accuracy|floatformat:4 }}</dd>
+    <dt class="col-sm-4">Held-out macro F1</dt><dd class="col-sm-8">{{ evidence.test_metrics.macro_f1|floatformat:4 }}</dd>
+    <dt class="col-sm-4">Train / validation / test rows</dt><dd class="col-sm-8">{{ evidence.split_counts.train }} / {{ evidence.split_counts.validation }} / {{ evidence.split_counts.test }}</dd>
+    <dt class="col-sm-4">Input contract</dt><dd class="col-sm-8">Native Kaggle predictors only</dd>
+</dl>
+<div class="mb-4">
+    <h2 class="h5">Analyse Records</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label class="form-label" for="native-dataset">Prudential CSV (up to 100 records, 2 MB)</label>
+        <input class="form-control mb-3" id="native-dataset" name="dataset" type="file" accept=".csv" required>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-play me-1"></i>Analyse</button>
+            <a class="btn btn-outline-secondary" href="{% url 'risk_engine:kaggle_sample' %}"><i class="bi bi-download me-1"></i>Held-out sample</a>
+        </div>
+    </form>
+</div>
+{% if results %}
+<h2 class="h5">Prediction Results</h2>
+<p class="text-muted">Uncalibrated class probabilities. Uploaded records are not saved as applicants.</p>
+<div class="table-responsive">
+<table class="table table-sm align-middle">
+    <thead><tr><th>Row</th><th>Predicted category</th><th>HIGH</th><th>MEDIUM</th><th>LOW</th></tr></thead>
+    <tbody>{% for result in results %}<tr><td>{{ result.row }}</td><td>{{ result.category }}</td><td>{{ result.high|floatformat:3 }}</td><td>{{ result.medium|floatformat:3 }}</td><td>{{ result.low|floatformat:3 }}</td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% endif %}
+{% else %}
+<p role="status">No trained Kaggle model is included in this deployment.</p>
+{% endif %}
+{% endblock %}

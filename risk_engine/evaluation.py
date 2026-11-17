@@ -1,7 +1,9 @@
 """Offline Prudential benchmark. Its feature contract is not the applicant form."""
 import hashlib
 import time
+from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 import sklearn
@@ -89,7 +91,7 @@ def metrics(target, predicted):
             'macro_f1': float(f1_score(target, predicted, labels=LABELS, average='macro', zero_division=0))}
 
 
-def evaluate_native(frame, seed=20261017, progress=lambda message: None):
+def evaluate_native(frame, seed=20261017, progress=lambda message: None, export_dir=None):
     features, target, duplicates = prepare_native_data(frame)
     train, validation, test = split_indices(target, seed)
     candidates = build_candidates(features, seed)
@@ -111,6 +113,16 @@ def evaluate_native(frame, seed=20261017, progress=lambda message: None):
         winner.fit(features.iloc[development], target.iloc[development])
         predicted = winner.predict(features.iloc[test])
         final_metrics = metrics(target.iloc[test], predicted)
+    if export_dir is not None:
+        destination = Path(export_dir)
+        destination.mkdir(parents=True, exist_ok=True)
+        joblib.dump({
+            'pipeline': winner, 'feature_columns': list(features.columns),
+            'nominal_columns': [column for column in NOMINAL_COLUMNS if column in features],
+            'input_contract': 'prudential-native-v1', 'sklearn_version': sklearn.__version__,
+        }, destination / 'model.joblib', compress=3)
+        # These predictors were held out from fitting; labels are not exported.
+        features.iloc[test[:20]].to_csv(destination / 'sample.csv', index=False)
     return {
         'purpose': 'Offline Kaggle benchmark; NOT compatible with live applicant inputs',
         'deployable': False, 'seed': seed, 'sklearn_version': sklearn.__version__,

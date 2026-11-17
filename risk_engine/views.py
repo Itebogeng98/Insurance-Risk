@@ -4,8 +4,9 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 import csv
+import logging
 
 from accounts.audit import write_audit_log
 from accounts.models import AuditLog
@@ -17,6 +18,52 @@ from .training import queue_training
 from .models import ModelVersion, TrainingDataset
 from .scoring import IncompleteApplicantProfileError, ModelNotTrainedError, assess_applicant
 from .applicant_data import APPLICANT_COLUMNS
+from .kaggle_analysis import bundle_directory, model_evidence, predict_native
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def kaggle_analysis(request):
+    if not is_administrator(request.user):
+        return HttpResponse('Administrator role required.', status=403)
+    try:
+        evidence = model_evidence()
+    except (OSError, ValueError):
+        evidence = None
+        messages.error(request, 'Kaggle build evidence is unavailable. Check the deployment logs.')
+    results = []
+    if request.method == 'POST':
+        if evidence is None:
+            messages.error(request, 'No native Kaggle model is bundled with this deployment.')
+        else:
+            try:
+                results = predict_native(request.FILES.get('dataset'), evidence)
+            except (ValueError, UnicodeError) as exc:
+                messages.error(request, str(exc))
+            except Exception:
+                logging.getLogger(__name__).exception('Native Kaggle inference failed')
+                messages.error(request, 'Kaggle inference failed. Check server logs; no applicant records were changed.')
+            else:
+                write_audit_log(
+                    request=request, action=AuditLog.Action.DATA_ACCESS,
+                    object_type='KaggleNativeAnalysis',
+                    detail=f'Native Kaggle inference on {len(results)} records; no applicant assessment created.',
+                )
+    return render(request, 'risk_engine/kaggle_analysis.html', {'evidence': evidence, 'results': results})
+
+
+@login_required
+@require_GET
+def kaggle_sample(request):
+    if not is_administrator(request.user):
+        return HttpResponse('Administrator role required.', status=403)
+    path = bundle_directory() / 'sample.csv'
+    if not path.is_file():
+        return HttpResponse('No Kaggle sample is bundled with this deployment.', status=404)
+    response = HttpResponse(path.read_bytes(), content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="kaggle-heldout-predictors.csv"'
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @login_required
