@@ -36,6 +36,57 @@ The official Kaggle CLI (pinned to 2.2.5 for this optional build step) downloads
 train.csv into a temporary directory that is removed after training. The API is
 used to obtain data; it is not a hosted prediction API. Token values are not logged.
 
+### Authentication troubleshooting
+
+KAGGLE_API_TOKEN must be the token value only, without quotes, JSON or an export
+command. A legacy key from kaggle.json is not the same as a new API token. To use
+legacy credentials, remove KAGGLE_API_TOKEN and set KAGGLE_USERNAME and KAGGLE_KEY
+to the respective values from your own legacy credentials. Do not commit the file.
+The CLI prioritises API tokens, so leaving an invalid token set can interfere with
+legacy authentication. Both methods require the same account to have competition
+access. First confirm you can download train.csv from the competition website.
+
+The command now reports classified authentication, access, missing-file, rate-limit,
+network and CLI errors without printing the raw subprocess output. An unknown
+error remains marked unclassified; it is not assumed to be a bad password.
+
+## Alternative source: already downloaded CSV
+
+The downloaded Prudential archive contains train.csv.zip, which itself contains
+train.csv. Its training CSV matches the existing local etl/raw_data/train.csv
+byte-for-byte. The test.csv and sample_submission.csv files are not training data.
+
+The build now accepts `KAGGLE_BUILD_CSV_PATH=etl/raw_data/train.csv` with
+`KAGGLE_BUILD_ENABLED=True` and `RENDER_TRAINING_ENABLED=False`. In that mode it
+skips API authentication, downloading and Kaggle CLI installation. Training still
+runs on Render, not locally.
+
+Important: the path must exist INSIDE THE RENDER BUILD. The local Downloads path
+is inaccessible to Render, and etl/raw_data is gitignored. Merely pushing the code
+or setting this variable does not transfer the CSV. A repository-based transfer
+requires explicitly including the file, only after confirming the competition
+rules permit it and the repository's access is appropriate. Do not publish this
+dataset in a public repository without permission. No dataset has been staged,
+committed or uploaded automatically.
+
+The repository owner confirmed the repository is private. The ignore rules now
+allow only etl/raw_data/train.csv to be included in a commit; all other raw-data
+files remain ignored. Include that CSV along with the code changes in the next
+commit and push. Confirm it appears in the private repository before redeploying.
+Do not make the repository public without reviewing dataset distribution rights.
+
+Set these values on the existing Render service before deploying that commit:
+
+```text
+KAGGLE_BUILD_ENABLED=True
+KAGGLE_BUILD_CSV_PATH=etl/raw_data/train.csv
+RENDER_TRAINING_ENABLED=False
+```
+
+KAGGLE_API_TOKEN, KAGGLE_USERNAME and KAGGLE_KEY are unnecessary for this route
+and can be removed. Look for `Using supplied Prudential CSV; Kaggle API download
+skipped.` followed by model training progress and `KAGGLE BUILD COMPLETE`.
+
 ## Demonstrate in the application
 
 1. Log in as an Administrator, for example mcmakwela.

@@ -28,5 +28,7 @@ kaggle.json
 .DS_Store
 Thumbs.db
 
-etl/raw_data/
+# Only this authorised training source is included for the private Render build.
+etl/raw_data/*
+!etl/raw_data/train.csv
 risk_engine/ml_models/

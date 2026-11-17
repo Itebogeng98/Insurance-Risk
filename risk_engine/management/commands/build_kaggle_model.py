@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -16,28 +17,75 @@ from django.utils import timezone
 from risk_engine.evaluation import evaluate_native
 
 
+def download_failure_hint(output):
+    """Classify private CLI output without echoing tokens, URLs or response bodies."""
+    message = output.lower()
+    if re.search(r'\b401\b', message) or 'authentication required' in message or 'unauthorized' in message:
+        return 'Authentication failed. Replace the token, or use KAGGLE_USERNAME and KAGGLE_KEY without KAGGLE_API_TOKEN.'
+    if re.search(r'\b403\b|accept[^\n]*rules', message) or 'forbidden' in message:
+        return 'Access denied. Check competition access and accept its rules using the same Kaggle account as the credentials.'
+    if re.search(r'\b404\b', message) or 'not found' in message:
+        return 'Competition or file unavailable. Confirm this account can download Prudential train.csv on Kaggle.'
+    if re.search(r'\b429\b', message) or 'too many requests' in message:
+        return 'Kaggle rate limit reached. Wait before redeploying.'
+    if any(word in message for word in ('timed out', 'timeout', 'connectionerror', 'name resolution', 'sslerror')):
+        return 'Network, timeout or TLS error contacting Kaggle. Retry later and check Render connectivity.'
+    if 'unrecognized arguments' in message or 'invalid choice' in message:
+        return 'Kaggle CLI rejected its arguments. Confirm the build installed the pinned kaggle==2.2.5 version.'
+    if 'modulenotfounderror' in message or 'importerror' in message:
+        return 'Kaggle CLI dependency import failed. Review the pip installation stage of the build.'
+    return 'Unclassified CLI failure. Verify account access by downloading train.csv in the Kaggle website; raw output remains private.'
+
+
 class Command(BaseCommand):
     help = 'Download authorised Kaggle data and train a build-bundled native analysis model.'
 
     def handle(self, *args, **options):
-        if not os.environ.get('KAGGLE_API_TOKEN', '').strip():
-            raise CommandError('Set KAGGLE_API_TOKEN privately in Render before enabling the Kaggle build.')
+        supplied_path = os.environ.get('KAGGLE_BUILD_CSV_PATH', '').strip()
+        supplied_source = None
+        if supplied_path:
+            supplied_source = Path(supplied_path)
+            if not supplied_source.is_absolute():
+                supplied_source = Path(settings.BASE_DIR) / supplied_source
+            if not supplied_source.is_file() or supplied_source.suffix.lower() != '.csv':
+                raise CommandError('KAGGLE_BUILD_CSV_PATH must identify an existing CSV inside the Render build environment, not a Windows path or ZIP.')
+        download_env = os.environ.copy()
+        for key in ('KAGGLE_API_TOKEN', 'KAGGLE_USERNAME', 'KAGGLE_KEY'):
+            value = download_env.get(key, '').strip()
+            if value:
+                download_env[key] = value
+            else:
+                download_env.pop(key, None)
+        token = download_env.get('KAGGLE_API_TOKEN', '')
+        if not supplied_source and not token and not (download_env.get('KAGGLE_USERNAME') and download_env.get('KAGGLE_KEY')):
+            raise CommandError('Set KAGGLE_API_TOKEN, or both KAGGLE_USERNAME and KAGGLE_KEY, privately in Render.')
+        if not supplied_source and token.startswith(('{', '"', "'", 'export ', 'KAGGLE_API_TOKEN=')):
+            raise CommandError('KAGGLE_API_TOKEN must contain only the token value, without JSON, quotes or a shell command.')
         destination = Path(settings.BASE_DIR) / 'risk_engine' / 'ml_models' / 'kaggle_native'
         with tempfile.TemporaryDirectory(prefix='prudential-build-') as temporary:
             directory = Path(temporary)
-            self.stdout.write('Downloading authorised Prudential train.csv from Kaggle...')
-            try:
-                subprocess.run([
-                    'kaggle', 'competitions', 'download',
-                    'prudential-life-insurance-assessment', '-f', 'train.csv',
-                    '-p', str(directory), '-q',
-                ], check=True, timeout=600, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except (OSError, subprocess.SubprocessError) as exc:
-                raise CommandError(
-                    'Kaggle download failed. Check the API token, competition rule acceptance '
-                    'and network access. Credentials were not logged.'
-                ) from exc
-            source = directory / 'train.csv'
+            if supplied_source:
+                self.stdout.write('Using supplied Prudential CSV; Kaggle API download skipped.')
+            else:
+                self.stdout.write('Downloading authorised Prudential train.csv from Kaggle...')
+                self.stdout.flush()
+                try:
+                    subprocess.run([
+                        'kaggle', 'competitions', 'download',
+                        'prudential-life-insurance-assessment', '-f', 'train.csv',
+                        '-p', str(directory), '-q',
+                    ], check=True, timeout=600, capture_output=True, text=True,
+                        encoding='utf-8', errors='replace', env=download_env)
+                except subprocess.TimeoutExpired:
+                    raise CommandError('Kaggle download timed out after 10 minutes. No training started.') from None
+                except subprocess.CalledProcessError as exc:
+                    raise CommandError(
+                        f'Kaggle CLI exited with code {exc.returncode}. '
+                        + download_failure_hint((exc.stdout or '') + '\n' + (exc.stderr or ''))
+                    ) from None
+                except OSError:
+                    raise CommandError('Kaggle CLI could not start. Check its installation and executable path in the build.') from None
+            source = supplied_source or directory / 'train.csv'
             if not source.exists():
                 archive = directory / 'train.csv.zip'
                 try:
