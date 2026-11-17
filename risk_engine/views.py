@@ -12,6 +12,7 @@ from accounts.models import AuditLog
 from applicants.permissions import can_assess_applicants, get_visible_applicant_or_404, is_administrator
 
 from .model_versions import activate_model_version
+from .model_review import approve_model
 from .training import queue_training
 from .models import ModelVersion, TrainingDataset
 from .scoring import IncompleteApplicantProfileError, ModelNotTrainedError, assess_applicant
@@ -75,6 +76,21 @@ def model_management(request: HttpRequest) -> HttpResponse:
                     detail='Validated dataset queued for training.',
                 )
                 messages.success(request, 'Dataset queued. The trained model will be available for review before activation.')
+        elif action == 'approve':
+            version_id = request.POST.get('version_id', '')
+            if not getattr(settings, 'MODEL_ACTIVATION_ENABLED', True):
+                messages.error(request, 'Model approval is unavailable on this deployment.')
+            elif request.POST.get('review_confirmed') != 'yes':
+                messages.error(request, 'Confirm that you reviewed the dataset provenance, labels and live input compatibility.')
+            elif not version_id.isdigit():
+                messages.error(request, 'Select a valid model version.')
+            else:
+                try:
+                    approve_model(version_id, request.user, request.POST.get('review_notes'))
+                except (ValueError, OSError, ModelVersion.DoesNotExist) as exc:
+                    messages.error(request, str(exc))
+                else:
+                    messages.success(request, 'Input review recorded. The model can now be activated.')
         elif action == 'activate':
             version_id = request.POST.get('version_id', '')
             version = ModelVersion.objects.filter(pk=version_id).first() if version_id.isdigit() else None
@@ -84,6 +100,11 @@ def model_management(request: HttpRequest) -> HttpResponse:
                 except (OSError, ValueError) as exc:
                     messages.error(request, str(exc))
                 else:
+                    write_audit_log(
+                        request=request, action=AuditLog.Action.DATA_CHANGE,
+                        object_type='ModelVersion', object_id=version.pk,
+                        detail=f'Model {version.version_tag} activated.',
+                    )
                     messages.success(request, f'{version.version_tag} activated.')
             else:
                 messages.error(request, 'Select a valid model version.')

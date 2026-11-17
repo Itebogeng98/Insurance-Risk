@@ -9,6 +9,7 @@ from functools import lru_cache
 import joblib
 import pandas as pd
 from django.conf import settings
+from django.db import transaction
 
 from applicants.models import Applicant
 
@@ -206,6 +207,7 @@ def score_applicant(applicant: Applicant) -> RiskAssessmentResult:
     )
 
 
+@transaction.atomic
 def assess_applicant(applicant: Applicant) -> RiskAssessment:
     result = score_applicant(applicant)
     active_version = _active_model_version()

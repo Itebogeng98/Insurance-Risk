@@ -52,13 +52,14 @@
                     <tbody>
                     {% for version in model_versions %}
                         <tr>
-                            <td>{{ version.version_tag }}{% if not version.input_contract_verified %}<br><small class="text-muted">Not approved for production</small>{% endif %}</td>
+                            <td class="text-break">{{ version.version_tag }}{% if not version.input_contract_verified %}<br><small class="text-muted">Input review required</small>{% endif %}</td>
                             <td>{{ version.accuracy|default:"-" }}</td>
                             <td>{{ version.macro_f1|default:"-" }}</td>
                             <td>{{ version.inference_p95_ms|default:"-" }}</td>
                             <td>{% if version.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Stored</span>{% endif %}</td>
                             <td class="text-end">
                                 {% if model_activation_enabled and not version.is_active %}
+                                    {% if version.input_contract_verified %}
                                     <form method="post" class="d-inline">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="activate">
@@ -67,6 +68,25 @@
                                             <i class="bi bi-arrow-counterclockwise me-1"></i>Activate
                                         </button>
                                     </form>
+                                    {% elif version.training_schema == 3 %}
+                                    <details class="text-start">
+                                        <summary>Review</summary>
+                                        <form method="post" class="mt-2">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="approve">
+                                            <input type="hidden" name="version_id" value="{{ version.pk }}">
+                                            <label for="review-{{ version.pk }}" class="form-label">Provenance and input review notes</label>
+                                            <textarea id="review-{{ version.pk }}" name="review_notes" class="form-control mb-2" rows="3" minlength="30" maxlength="2000" required></textarea>
+                                            <div class="form-check mb-2">
+                                                <input id="confirm-{{ version.pk }}" name="review_confirmed" value="yes" class="form-check-input" type="checkbox" required>
+                                                <label for="confirm-{{ version.pk }}" class="form-check-label">I verified authorised data provenance, independent human labels and compatibility with live applicant inputs.</label>
+                                            </div>
+                                            <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-check2-square me-1"></i>Approve input review</button>
+                                        </form>
+                                    </details>
+                                    {% else %}
+                                    <small class="text-muted">Incompatible training inputs</small>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                         </tr>

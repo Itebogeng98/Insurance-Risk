@@ -1,4 +1,4 @@
-"""Render web-only deployment; training requires separate durable infrastructure."""
+"""Render deployment with optional disk-backed, supervised training."""
 
 from .production import *  # noqa: F403
 
@@ -20,9 +20,11 @@ STORAGES = {
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
 }
 
-# Never accept durable jobs/files into Render's ephemeral web filesystem.
-TRAINING_ENABLED = False
-MODEL_ACTIVATION_ENABLED = False
-MEDIA_ROOT = BASE_DIR / 'media'
-MODEL_DIR = BASE_DIR / 'risk_engine' / 'ml_models'
+# Startup verifies the mount before starting either process. Off by default so
+# existing free services do not silently accept files into ephemeral storage.
+TRAINING_ENABLED = os.environ.get('RENDER_TRAINING_ENABLED', 'False') == 'True'
+MODEL_ACTIVATION_ENABLED = TRAINING_ENABLED
+RENDER_DATA_ROOT = Path('/var/data')
+MEDIA_ROOT = RENDER_DATA_ROOT / 'media' if TRAINING_ENABLED else BASE_DIR / 'media'
+MODEL_DIR = RENDER_DATA_ROOT / 'models' if TRAINING_ENABLED else BASE_DIR / 'risk_engine' / 'ml_models'
 SECURE_REDIRECT_EXEMPT = [r'^healthz/$']
