@@ -68,24 +68,34 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 DB_ENGINE = os.environ.get('DB_ENGINE', 'postgresql').lower()
+DB_ENGINE = DB_ENGINE.removeprefix('django.db.backends.')
+if DB_ENGINE == 'sqlite3':
+    DB_ENGINE = 'sqlite'
 DATABASE_ENGINE_MAP = {
     'mysql': 'django.db.backends.mysql',
     'postgresql': 'django.db.backends.postgresql',
     'postgres': 'django.db.backends.postgresql',
 }
-DATABASES = {
-    'default': {
-        'ENGINE': DATABASE_ENGINE_MAP.get(DB_ENGINE, 'django.db.backends.postgresql'),
-        'NAME': os.environ['DB_NAME'],
-        'USER': os.environ['DB_USER'],
-        'PASSWORD': os.environ['DB_PASSWORD'],
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get(
-            'DB_PORT',
-            '3306' if DB_ENGINE == 'mysql' else '5432',
-        ),
+if DB_ENGINE == 'sqlite':
+    # Self-contained local development; production still uses a database server.
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.environ.get('SQLITE_PATH', str(BASE_DIR / 'db.sqlite3')),
+            'OPTIONS': {'timeout': 20},
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': DATABASE_ENGINE_MAP.get(DB_ENGINE, 'django.db.backends.postgresql'),
+            'NAME': os.environ['DB_NAME'],
+            'USER': os.environ['DB_USER'],
+            'PASSWORD': os.environ['DB_PASSWORD'],
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '3306' if DB_ENGINE == 'mysql' else '5432'),
+        }
+    }
 
 
 AUTH_PASSWORD_VALIDATORS = [
