@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 
-{% block title %}Applicants{% endblock %}
+{% block title %}{% if is_applicant_account %}My Application{% elif application_view %}Applications{% else %}Applicants{% endif %}{% endblock %}
 
 {% block content %}
 <div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
     <div>
-        <span class="eyebrow text-primary">Underwriting workspace</span>
-        <h1 class="h3 mb-0">Applicants</h1>
-        <p class="text-muted mb-0">{{ paginator.count|default:applicants|length }} record{{ paginator.count|default:applicants|length|pluralize }}</p>
+        <span class="eyebrow text-primary">{% if is_applicant_account %}Application{% else %}Underwriting workspace{% endif %}</span>
+        <h1 class="h3 mb-0">{% if is_applicant_account %}My Application{% elif application_view %}Applications{% else %}Applicants{% endif %}</h1>
+        <p class="text-muted mb-0">{{ paginator.count }} record{{ paginator.count|pluralize }}</p>
     </div>
     {% if can_create_applicants %}
         <a href="{% url 'applicants:create' %}" class="btn btn-primary">
-            <i class="bi bi-person-plus me-1"></i>New Applicant
+            <i class="bi bi-person-plus me-1"></i>{{ application_create_label }}
         </a>
     {% endif %}
 </div>
@@ -21,8 +21,8 @@
         <div class="metric-tile metric-tile-primary">
             <div class="metric-icon"><i class="bi bi-people"></i></div>
             <div>
-                <span>Total applicants</span>
-                <strong>{{ paginator.count|default:applicants|length }}</strong>
+                <span>{% if is_applicant_account or application_view %}Total applications{% else %}Total applicants{% endif %}</span>
+                <strong>{{ paginator.count }}</strong>
             </div>
         </div>
     </div>
@@ -58,7 +58,7 @@
             <div class="col-md-auto d-flex gap-2">
                 <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search me-1"></i>Search</button>
                 {% if search_query %}
-                    <a href="{% url 'applicants:list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle me-1"></i>Clear</a>
+                    <a href="{{ request.path }}" class="btn btn-outline-secondary"><i class="bi bi-x-circle me-1"></i>Clear</a>
                 {% endif %}
             </div>
         </form>
@@ -68,10 +68,10 @@
             <thead class="table-light">
                 <tr>
                     <th>Name</th>
-                    <th>National ID</th>
+                    <th>{% if application_view %}Account{% else %}National ID{% endif %}</th>
                     <th>Risk</th>
-                    <th>Captured By</th>
-                    <th>Created</th>
+                    <th>{% if application_view %}Submitted By{% else %}Captured By{% endif %}</th>
+                    <th>{% if application_view %}Submitted{% else %}Created{% endif %}</th>
                     <th></th>
                 </tr>
             </thead>
@@ -82,7 +82,7 @@
                         <div class="fw-semibold">{{ applicant }}</div>
                         <div class="text-muted small">{{ applicant.email }}</div>
                     </td>
-                    <td><span class="text-monospace">{{ applicant.national_id }}</span></td>
+                    <td>{% if application_view %}{{ applicant.account.username|default:"Staff-captured" }}{% else %}<span class="text-monospace">{{ applicant.national_id }}</span>{% endif %}</td>
                     <td>
                         {% with latest=applicant.risk_assessments.first %}
                             {% if latest %}
@@ -94,7 +94,7 @@
                             {% endif %}
                         {% endwith %}
                     </td>
-                    <td>{{ applicant.created_by }}</td>
+                    <td>{{ applicant.created_by }}{% if application_view %}<small class="d-block text-muted">Underwriter: {{ applicant.assigned_underwriter|default:"Unassigned" }}</small>{% endif %}</td>
                     <td>{{ applicant.created_at|date:"Y-m-d" }}</td>
                     <td class="text-end">
                         <a href="{% url 'applicants:detail' applicant.pk %}" class="btn btn-sm btn-outline-primary">
@@ -110,12 +110,12 @@
                             {% if search_query %}
                                 <h2>No matching applicants</h2>
                                 <p>Try a different name, national ID, or email address.</p>
-                                <a href="{% url 'applicants:list' %}" class="btn btn-outline-primary btn-sm">Clear search</a>
+                                <a href="{{ request.path }}" class="btn btn-outline-primary btn-sm">Clear search</a>
                             {% else %}
                                 <h2>No applicants yet</h2>
-                                <p>{% if can_create_applicants %}Create the first applicant profile to start risk assessment.{% else %}No applicant record is linked to your account yet.{% endif %}</p>
+                                <p>{% if is_applicant_account %}No application found.{% elif can_create_applicants %}Create the first applicant profile to start risk assessment.{% else %}No applicant record is linked to your account yet.{% endif %}</p>
                                 {% if can_create_applicants %}
-                                    <a href="{% url 'applicants:create' %}" class="btn btn-primary btn-sm">New applicant</a>
+                                    <a href="{% url 'applicants:create' %}" class="btn btn-primary btn-sm">{{ application_create_label }}</a>
                                 {% endif %}
                             {% endif %}
                         </div>
@@ -131,11 +131,11 @@
 <nav class="mt-3">
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&amp;q={{ search_query|urlencode }}">Previous</a></li>
         {% endif %}
         <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
         {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&amp;q={{ search_query|urlencode }}">Next</a></li>
         {% endif %}
     </ul>
 </nav>

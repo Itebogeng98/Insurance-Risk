@@ -50,6 +50,12 @@ class Applicant(models.Model):
         related_name='applicants',
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    assigned_underwriter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='assigned_applications',
+        limit_choices_to={'profile__role': 'UNDERWRITER', 'is_active': True,
+                          'is_staff': False, 'is_superuser': False},
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:

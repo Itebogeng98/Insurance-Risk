@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% load form_tags %}
 
-{% block title %}New Applicant{% endblock %}
+{% block title %}{% if is_applicant_account %}My Application{% else %}New Applicant{% endif %}{% endblock %}
 
 {% block content %}
 <div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
     <div>
-        <span class="eyebrow text-primary">New profile</span>
-        <h1 class="h3 mb-0">Capture Applicant</h1>
-        <p class="text-muted mb-0">Complete one section at a time to build the applicant risk profile.</p>
+        <span class="eyebrow text-primary">{% if is_applicant_account %}New application{% else %}New profile{% endif %}</span>
+        <h1 class="h3 mb-0">{% if is_applicant_account %}My Application{% else %}Capture Applicant{% endif %}</h1>
+        {% if not is_applicant_account %}<p class="text-muted mb-0">Complete one section at a time to build the applicant risk profile.</p>{% endif %}
     </div>
     <div class="wizard-count">
         Step {{ current_step.number }} of {{ total_steps }}
@@ -89,4 +89,17 @@
         </div>
     </form>
 </div>
+{% if has_application_draft %}
+<details class="mt-4">
+    <summary class="text-danger">Restart Application</summary>
+    <form method="post" action="{% url 'applicants:restart' %}" class="mt-3">
+        {% csrf_token %}
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="confirm_restart" id="confirm-restart" value="yes" required>
+            <label class="form-check-label" for="confirm-restart">Discard my saved sections and start again.</label>
+        </div>
+        <button type="submit" class="btn btn-outline-danger"><i class="bi bi-arrow-counterclockwise me-1"></i>Discard and Restart</button>
+    </form>
+</details>
+{% endif %}
 {% endblock %}

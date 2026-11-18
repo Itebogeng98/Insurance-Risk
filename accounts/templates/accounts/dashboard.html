@@ -7,19 +7,26 @@
     <div>
         <span class="eyebrow text-primary">Workspace</span>
         <h1 class="h3 mb-0">Dashboard</h1>
-        <p class="text-muted mb-0">Track applicant risk profiles, assessments, and follow-up work.</p>
+        <p class="text-muted mb-0">{% if is_applicant_account %}Your application and assessment results.{% else %}Track applicant risk profiles, assessments, and follow-up work.{% endif %}</p>
     </div>
     <div class="d-flex gap-2">
-        {% if user.profile.role != 'CUSTOMER' %}
+        {% if can_create_applicants %}
         <a href="{% url 'applicants:create' %}" class="btn btn-primary">
-            <i class="bi bi-person-plus me-1"></i>New Applicant
+            <i class="bi bi-person-plus me-1"></i>{{ application_create_label }}
         </a>
         {% endif %}
         <a href="{% url 'applicants:list' %}" class="btn btn-outline-primary">
-            <i class="bi bi-people me-1"></i>Applicants
+            <i class="bi bi-people me-1"></i>{% if is_applicant_account %}My Application{% else %}Applicants{% endif %}
         </a>
     </div>
 </div>
+
+{% if is_applicant_account and not application_profile_complete and can_create_applicants %}
+<div class="alert alert-info d-flex align-items-center justify-content-between flex-wrap gap-2" role="status">
+    <span>Save your first name, last name and email before starting your application.</span>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:profile' %}?apply=1"><i class="bi bi-person-check me-1"></i>Complete Profile</a>
+</div>
+{% endif %}
 
 <div class="row g-3 mb-4">
     <div class="col-md-6 col-xl-3">
@@ -99,10 +106,9 @@
                                 <td colspan="5">
                                     <div class="empty-state compact">
                                         <i class="bi bi-person-vcard"></i>
-                                        <h2>No applicants yet</h2>
-                                        {% if user.profile.role != 'CUSTOMER' %}
-                                        <p>Create your first applicant profile.</p>
-                                        <a href="{% url 'applicants:create' %}" class="btn btn-primary btn-sm">New applicant</a>
+                                        <h2>{% if is_applicant_account %}No application yet{% else %}No applicants yet{% endif %}</h2>
+                                        {% if can_create_applicants %}
+                                        <a href="{% url 'applicants:create' %}" class="btn btn-primary btn-sm">{{ application_create_label }}</a>
                                         {% else %}
                                         <p>No applicant record is linked to your account yet.</p>
                                         {% endif %}

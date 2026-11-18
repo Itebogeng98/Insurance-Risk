@@ -1,7 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
-from django.conf import settings
 from xml.sax.saxutils import escape
 from io import BytesIO
 
@@ -116,8 +115,6 @@ def _plain_report_text(context: dict) -> str:
         f'Date of birth: {applicant.date_of_birth}',
         f'Captured by: {applicant.created_by}',
     ]
-    if getattr(settings, 'ACADEMIC_DEMO', True):
-        lines.insert(0, 'ACADEMIC DEMONSTRATION - experimental output, not an insurance decision.')
     if latest:
         lines.extend([
             f'Risk score: {latest.risk_score}',
