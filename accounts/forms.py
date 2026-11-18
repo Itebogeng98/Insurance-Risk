@@ -57,6 +57,9 @@ class ProfileForm(forms.ModelForm):
         self.fields['first_name'].widget.attrs['placeholder'] = 'First name'
         self.fields['last_name'].widget.attrs['placeholder'] = 'Last name'
         self.fields['email'].widget.attrs['placeholder'] = 'name@example.com'
+        for name in ('first_name', 'last_name', 'email'):
+            self.fields[name].required = True
+            self.fields[name].widget.attrs['required'] = True
 
 
 class StyledPasswordChangeForm(PasswordChangeForm):

@@ -3,6 +3,7 @@ import re
 from decimal import Decimal
 
 from django import forms
+from django.contrib.auth import get_user_model
 
 from config.form_utils import add_bootstrap_classes
 
@@ -23,6 +24,19 @@ class BootstrapModelForm(forms.ModelForm):
         for field in self.fields.values():
             if field.required:
                 field.widget.attrs['required'] = True
+
+
+class UnderwriterAssignmentForm(forms.Form):
+    underwriter = forms.ModelChoiceField(
+        queryset=get_user_model().objects.none(), required=False, empty_label='Unassigned',
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['underwriter'].queryset = get_user_model().objects.filter(
+            profile__role='UNDERWRITER', is_active=True, is_staff=False, is_superuser=False,
+        ).order_by('username')
+        add_bootstrap_classes(self)
 
 
 def _clean_title(value: str) -> str:

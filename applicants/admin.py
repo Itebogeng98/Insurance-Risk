@@ -32,7 +32,8 @@ class SpendingBehaviourInline(admin.StackedInline):
 
 @admin.register(Applicant)
 class ApplicantAdmin(admin.ModelAdmin):
-    list_display = ('first_name', 'last_name', 'national_id', 'created_by', 'created_at')
+    list_display = ('first_name', 'last_name', 'national_id', 'created_by', 'assigned_underwriter', 'created_at')
+    readonly_fields = ('assigned_underwriter',)
     search_fields = ('first_name', 'last_name', 'national_id', 'email')
     inlines = [
         MedicalHistoryInline,

@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.contrib import messages
@@ -8,6 +9,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import DetailView, ListView
+from django.views.decorators.http import require_POST, require_http_methods
 
 from accounts.audit import write_audit_log
 from accounts.models import AuditLog
@@ -18,9 +20,10 @@ from .forms import (
     SalaryForm,
     SpendingBehaviourForm,
     VehicleInsuranceHistoryForm,
+    UnderwriterAssignmentForm,
 )
 from .models import Applicant
-from .permissions import can_assess_applicants, can_create_applicants, visible_applicants_for
+from .permissions import application_profile_complete, can_assess_applicants, can_create_applicants, is_administrator, is_applicant, visible_applicants_for, get_visible_applicant_or_404
 from risk_engine.recommendations import build_lifestyle_recommendations
 
 
@@ -141,13 +144,18 @@ def _expenses_within_income_limit(form, monthly_income) -> bool:
     if monthly_income is None or not form.is_valid():
         return True
     monthly_expenses = form.cleaned_data.get('monthly_expenses')
+    monthly_savings = form.cleaned_data.get('monthly_savings')
+    valid = True
     if monthly_expenses is not None and monthly_expenses > monthly_income * 3:
         form.add_error(
             'monthly_expenses',
             'Monthly expenditure may not exceed salary by more than 200%.',
         )
-        return False
-    return True
+        valid = False
+    if monthly_savings is not None and monthly_savings > monthly_income:
+        form.add_error('monthly_savings', 'Monthly savings cannot exceed monthly income.')
+        valid = False
+    return valid
 
 
 class ApplicantListView(LoginRequiredMixin, ListView):
@@ -155,9 +163,10 @@ class ApplicantListView(LoginRequiredMixin, ListView):
     template_name = 'applicants/applicant_list.html'
     context_object_name = 'applicants'
     paginate_by = 20
+    application_view = False
 
     def get_queryset(self):
-        queryset = visible_applicants_for(self.request.user).select_related('created_by').prefetch_related(
+        queryset = visible_applicants_for(self.request.user).select_related('created_by', 'account', 'assigned_underwriter').prefetch_related(
             'risk_assessments'
         ).order_by('-created_at')
         query = self.request.GET.get('q', '').strip()
@@ -174,6 +183,7 @@ class ApplicantListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('q', '').strip()
         context['can_create_applicants'] = can_create_applicants(self.request.user)
+        context['application_view'] = self.application_view
         return context
 
 
@@ -186,6 +196,7 @@ class ApplicantDetailView(LoginRequiredMixin, DetailView):
         return visible_applicants_for(self.request.user).select_related(
             'medical_history', 'lifestyle_habits', 'salary',
             'vehicle_insurance_history', 'spending_behaviour',
+            'assigned_underwriter',
         ).prefetch_related('risk_assessments__feature_contributions', 'risk_assessments__recommendations')
 
     def get_context_data(self, **kwargs):
@@ -210,16 +221,24 @@ class ApplicantDetailView(LoginRequiredMixin, DetailView):
 @login_required
 def applicant_create(request: HttpRequest) -> HttpResponse:
     if not can_create_applicants(request.user):
-        messages.error(request, 'Applicant accounts can view their own records, but cannot create applicant profiles.')
+        existing = Applicant.objects.filter(account=request.user).first() if is_applicant(request.user) else None
+        if existing:
+            request.session.pop(APPLICANT_WIZARD_SESSION_KEY, None)
+            messages.info(request, 'You already have an application.')
+            return redirect('applicants:detail', pk=existing.pk)
+        messages.error(request, 'Your account cannot create applications.')
         return redirect('applicants:list')
 
-    if request.method == 'GET' and 'step' not in request.GET:
-        request.session.pop(APPLICANT_WIZARD_SESSION_KEY, None)
+    if is_applicant(request.user) and not application_profile_complete(request.user):
+        messages.info(request, 'Save your first name, last name and email in your profile before starting an application.')
+        return redirect(f'{reverse("accounts:profile")}?apply=1')
 
     wizard_data = request.session.get(APPLICANT_WIZARD_SESSION_KEY, {})
     step_index = _get_requested_step(request)
 
     first_incomplete = _first_incomplete_step(wizard_data)
+    if request.method == 'GET' and 'step' not in request.GET and wizard_data:
+        return redirect(_wizard_url(first_incomplete if first_incomplete is not None else len(APPLICANT_WIZARD_STEPS) - 1))
     if request.method == 'GET' and first_incomplete is not None and step_index > first_incomplete:
         return redirect(_wizard_url(first_incomplete))
 
@@ -227,6 +246,15 @@ def applicant_create(request: HttpRequest) -> HttpResponse:
     stored_data = _session_data_to_multivalue(wizard_data.get(step['key']))
     form_data = request.POST if request.method == 'POST' else stored_data
     current_form = step['form_class'](form_data, prefix=step['prefix'])
+    if step['key'] == 'spending' and current_form.is_bound:
+        _expenses_within_income_limit(current_form, _stored_monthly_income(wizard_data))
+    if is_applicant(request.user) and step['key'] == 'applicant' and not current_form.is_bound:
+        current_form.initial.update({
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+            'email': request.user.email,
+            'consent_given': False,
+        })
 
     if request.method == 'POST':
         monthly_income = _stored_monthly_income(wizard_data) if step['key'] == 'spending' else None
@@ -240,6 +268,10 @@ def applicant_create(request: HttpRequest) -> HttpResponse:
 
             forms_map = _build_completed_forms(wizard_data)
             validity = [form.is_valid() for form in forms_map.values()]
+            if all(validity):
+                validity[-1] = _expenses_within_income_limit(
+                    forms_map['spending_form'], forms_map['salary_form'].cleaned_data['monthly_income'],
+                )
             if not all(validity):
                 first_invalid = next(
                     index for index, wizard_step in enumerate(APPLICANT_WIZARD_STEPS)
@@ -247,25 +279,39 @@ def applicant_create(request: HttpRequest) -> HttpResponse:
                 )
                 return redirect(_wizard_url(first_invalid))
 
-            with transaction.atomic():
-                applicant = forms_map['applicant_form'].save(commit=False)
-                applicant.created_by = request.user
-                applicant.save()
-                for key in (
-                    'medical_form', 'lifestyle_form', 'salary_form',
-                    'vehicle_form', 'spending_form',
-                ):
-                    instance = forms_map[key].save(commit=False)
-                    instance.applicant = applicant
-                    instance.save()
-            write_audit_log(
-                request=request,
-                action=AuditLog.Action.DATA_CHANGE,
-                object_type='Applicant',
-                object_id=applicant.pk,
-                detail='Applicant created.',
-            )
+            try:
+                with transaction.atomic():
+                    applicant = forms_map['applicant_form'].save(commit=False)
+                    applicant.created_by = request.user
+                    if is_applicant(request.user):
+                        # Serialise simultaneous submissions for this account.
+                        get_user_model().objects.select_for_update().get(pk=request.user.pk)
+                        existing = Applicant.objects.filter(account=request.user).first()
+                        if existing:
+                            request.session.pop(APPLICANT_WIZARD_SESSION_KEY, None)
+                            return redirect('applicants:detail', pk=existing.pk)
+                        applicant.account = request.user
+                    applicant.save()
+                    for key in (
+                        'medical_form', 'lifestyle_form', 'salary_form',
+                        'vehicle_form', 'spending_form',
+                    ):
+                        instance = forms_map[key].save(commit=False)
+                        instance.applicant = applicant
+                        instance.save()
+                    write_audit_log(
+                        request=request,
+                        action=AuditLog.Action.DATA_CHANGE,
+                        object_type='Applicant',
+                        object_id=applicant.pk,
+                        detail='Application submitted by its account holder.' if is_applicant(request.user) else 'Applicant created.',
+                    )
+            except IntegrityError:
+                messages.error(request, 'The application could not be saved because a record conflicts with these details. Review your personal details or contact an administrator.')
+                return redirect(_wizard_url(0))
             request.session.pop(APPLICANT_WIZARD_SESSION_KEY, None)
+            if is_applicant(request.user):
+                messages.success(request, 'Your application has been submitted. Assessment is pending.')
             return redirect('applicants:detail', pk=applicant.pk)
 
     steps_context = []
@@ -288,6 +334,49 @@ def applicant_create(request: HttpRequest) -> HttpResponse:
         'step_index': step_index,
         'total_steps': len(APPLICANT_WIZARD_STEPS),
         'steps': steps_context,
+        'has_application_draft': bool(wizard_data),
         'previous_step_url': _wizard_url(step_index - 1) if step_index > 0 else None,
-        'next_button_label': 'Save Applicant' if step_index == len(APPLICANT_WIZARD_STEPS) - 1 else 'Save and Continue',
+        'next_button_label': ('Submit Application' if is_applicant(request.user) else 'Save Applicant') if step_index == len(APPLICANT_WIZARD_STEPS) - 1 else 'Save and Continue',
     })
+
+
+@login_required
+@require_POST
+def applicant_restart(request):
+    if not can_create_applicants(request.user):
+        return HttpResponse('Application creation is not available for this account.', status=403)
+    if request.POST.get('confirm_restart') != 'yes':
+        messages.error(request, 'Confirm that you want to discard your unfinished application.')
+        return redirect('applicants:create')
+    request.session.pop(APPLICANT_WIZARD_SESSION_KEY, None)
+    messages.info(request, 'Unfinished application cleared. No submitted records were changed.')
+    return redirect('applicants:create')
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def assign_underwriter(request, pk):
+    if not is_administrator(request.user):
+        return HttpResponse('Administrator role required.', status=403)
+    applicant = get_visible_applicant_or_404(request.user, pk=pk)
+    form = UnderwriterAssignmentForm(
+        request.POST if request.method == 'POST' else None,
+        initial={'underwriter': applicant.assigned_underwriter_id},
+    )
+    if request.method == 'POST' and form.is_valid():
+        underwriter = form.cleaned_data['underwriter']
+        with transaction.atomic():
+            applicant = Applicant.objects.select_for_update().get(pk=applicant.pk)
+            previous_id = applicant.assigned_underwriter_id
+            new_id = underwriter.pk if underwriter else None
+            if previous_id != new_id:
+                applicant.assigned_underwriter = underwriter
+                applicant.save(update_fields=['assigned_underwriter', 'updated_at'])
+                write_audit_log(
+                    request=request, action=AuditLog.Action.DATA_CHANGE,
+                    object_type='Applicant', object_id=applicant.pk,
+                    detail=f'Underwriter assignment changed from {previous_id} to {new_id}.',
+                )
+        messages.success(request, 'Underwriter assignment saved.')
+        return redirect('applicants:detail', pk=applicant.pk)
+    return render(request, 'applicants/assign_underwriter.html', {'applicant': applicant, 'form': form})

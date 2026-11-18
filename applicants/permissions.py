@@ -1,4 +1,4 @@
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.shortcuts import get_object_or_404
 
 from .models import Applicant
@@ -22,11 +22,21 @@ def is_applicant(user) -> bool:
 
 
 def can_create_applicants(user) -> bool:
-    return user.is_authenticated and not is_applicant(user)
+    if not user.is_authenticated or not user.is_active:
+        return False
+    if is_applicant(user):
+        return not Applicant.objects.filter(account=user).exists()
+    return True
 
 
 def can_assess_applicants(user) -> bool:
     return user.is_authenticated and not is_applicant(user)
+
+
+def application_profile_complete(user) -> bool:
+    return user.is_authenticated and all(
+        getattr(user, field, '').strip() for field in ('first_name', 'last_name', 'email')
+    )
 
 
 def visible_applicants_for(user) -> QuerySet[Applicant]:
@@ -35,7 +45,10 @@ def visible_applicants_for(user) -> QuerySet[Applicant]:
         return queryset
     if user_role(user) == 'CUSTOMER':
         return queryset.filter(account=user)
-    return queryset.filter(created_by=user)
+    return queryset.filter(
+        Q(assigned_underwriter=user)
+        | Q(assigned_underwriter__isnull=True, created_by=user)
+    )
 
 
 def get_visible_applicant_or_404(user, **lookup) -> Applicant:

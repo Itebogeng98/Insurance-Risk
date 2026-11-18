@@ -10,7 +10,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView
 from django.views.generic import TemplateView
 
-from applicants.permissions import visible_applicants_for
+from applicants.permissions import can_create_applicants, is_applicant, visible_applicants_for
 from accounts.audit import write_audit_log
 from accounts.models import AuditLog
 from risk_engine.models import RiskAssessment
@@ -104,6 +104,11 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_object(self, queryset=None):
         return self.request.user
+
+    def get_success_url(self):
+        if self.request.GET.get('apply') == '1' and is_applicant(self.request.user) and can_create_applicants(self.request.user):
+            return reverse_lazy('applicants:create')
+        return super().get_success_url()
 
     def form_valid(self, form: ProfileForm) -> HttpResponse:
         messages.success(self.request, 'Profile updated.')

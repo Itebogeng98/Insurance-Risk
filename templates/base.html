@@ -29,22 +29,29 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link {% if request.resolver_match.url_name == 'list' %}active{% endif %}" href="{% url 'applicants:list' %}">
-                    <i class="bi bi-people me-2"></i>Applicants
+                    <i class="bi bi-people me-2"></i>{% if is_applicant_account %}My Application{% else %}Applicants{% endif %}
                 </a>
             </li>
-            {% if user.profile.role != 'CUSTOMER' %}
+            {% if can_create_applicants %}
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'create' %}active{% endif %}" href="{% url 'applicants:create' %}">
-                        <i class="bi bi-person-plus me-2"></i>New Applicant
+                        <i class="bi bi-person-plus me-2"></i>{{ application_create_label }}
                     </a>
                 </li>
+            {% endif %}
+            {% if user.is_authenticated and not is_applicant_account %}
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'applications' %}active{% endif %}" href="{% url 'applicants:applications' %}">
+                    <i class="bi bi-file-earmark-text me-2"></i>Applications
+                </a>
+            </li>
             {% endif %}
             <li class="nav-item">
                 <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'accounts:profile' %}">
                     <i class="bi bi-person-circle me-2"></i>Profile
                 </a>
             </li>
-            {% if user.is_staff or user.profile.role == 'ADMINISTRATOR' %}
+            {% if is_administrator_account %}
             <li class="nav-item">
                 <a class="nav-link {% if request.resolver_match.url_name == 'model_management' %}active{% endif %}" href="{% url 'risk_engine:model_management' %}">
                     <i class="bi bi-cpu me-2"></i>Model Management
@@ -120,12 +127,15 @@
     <div class="offcanvas-body">
         <ul class="nav nav-pills flex-column gap-1">
             <li class="nav-item"><a class="nav-link text-dark" href="{% url 'accounts:dashboard' %}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
-            <li class="nav-item"><a class="nav-link text-dark" href="{% url 'applicants:list' %}"><i class="bi bi-people me-2"></i>Applicants</a></li>
-            {% if user.profile.role != 'CUSTOMER' %}
-            <li class="nav-item"><a class="nav-link text-dark" href="{% url 'applicants:create' %}"><i class="bi bi-person-plus me-2"></i>New Applicant</a></li>
+            <li class="nav-item"><a class="nav-link text-dark" href="{% url 'applicants:list' %}"><i class="bi bi-people me-2"></i>{% if is_applicant_account %}My Application{% else %}Applicants{% endif %}</a></li>
+            {% if can_create_applicants %}
+            <li class="nav-item"><a class="nav-link text-dark" href="{% url 'applicants:create' %}"><i class="bi bi-person-plus me-2"></i>{{ application_create_label }}</a></li>
             {% endif %}
             <li class="nav-item"><a class="nav-link text-dark" href="{% url 'accounts:profile' %}"><i class="bi bi-person-circle me-2"></i>Profile</a></li>
-            {% if user.is_staff or user.profile.role == 'ADMINISTRATOR' %}
+            {% if user.is_authenticated and not is_applicant_account %}
+            <li class="nav-item"><a class="nav-link text-dark" href="{% url 'applicants:applications' %}"><i class="bi bi-file-earmark-text me-2"></i>Applications</a></li>
+            {% endif %}
+            {% if is_administrator_account %}
             <li class="nav-item"><a class="nav-link text-dark" href="{% url 'risk_engine:model_management' %}"><i class="bi bi-cpu me-2"></i>Model Management</a></li>
             {% endif %}
             {% if user.is_staff %}
